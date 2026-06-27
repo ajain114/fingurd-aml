@@ -56,7 +56,9 @@ class BaseAgent:
         self.on_tool_result = on_tool_result
 
     def run(self, user_message: str, context: str = "") -> dict:
-        if self.provider in ("groq", "gemini"):
+        if self.provider == "gemini":
+            return self._run_gemini(user_message, context)
+        if self.provider == "groq":
             return self._run_groq(user_message, context)
         return self._run_anthropic(user_message, context)
 
@@ -96,6 +98,89 @@ class BaseAgent:
 
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
+
+        return {"agent": self.name, "findings": "Max iterations reached.", "tool_calls": tool_call_log}
+
+    # ── Google Gemini native SDK path ────────────────────────────────────────────
+
+    def _run_gemini(self, user_message: str, context: str) -> dict:
+        import google.generativeai as genai
+
+        genai.configure(api_key=self.client)  # self.client holds the raw API key
+
+        tool_call_log = []
+
+        # Build Google-format tool declarations from Anthropic schema
+        google_tools = None
+        if self.tools:
+            decls = []
+            for t in self.tools:
+                schema = dict(t["input_schema"])
+                schema.pop("additionalProperties", None)
+                decls.append({
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": schema,
+                })
+            google_tools = [{"function_declarations": decls}]
+
+        system = self.system_prompt
+        if context:
+            system += f"\n\nContext from prior agents:\n{context}"
+
+        model = genai.GenerativeModel(
+            model_name=self.model,
+            system_instruction=system,
+            tools=google_tools,
+        )
+
+        chat = model.start_chat()
+        response = chat.send_message(user_message)
+
+        for _ in range(8):
+            # Collect any function_call parts from all candidates
+            fc_parts = []
+            for candidate in response.candidates:
+                for part in candidate.content.parts:
+                    if hasattr(part, "function_call") and part.function_call.name:
+                        fc_parts.append(part)
+
+            if not fc_parts:
+                # No tool calls — return text answer
+                text = ""
+                for candidate in response.candidates:
+                    for part in candidate.content.parts:
+                        if hasattr(part, "text") and part.text:
+                            text += part.text
+                return {"agent": self.name, "findings": text.strip(), "tool_calls": tool_call_log}
+
+            # Execute all function calls and collect responses
+            response_parts = []
+            for part in fc_parts:
+                name = part.function_call.name
+                args = dict(part.function_call.args)
+
+                if self.on_tool_call:
+                    self.on_tool_call(name, args)
+
+                handler = self.tool_registry.get(name)
+                result = handler(**args) if handler else {"error": f"Unknown tool: {name}"}
+
+                if self.on_tool_result:
+                    self.on_tool_result(name, result)
+
+                tool_call_log.append({"tool": name, "input": args})
+
+                response_parts.append(
+                    genai.protos.Part(
+                        function_response=genai.protos.FunctionResponse(
+                            name=name,
+                            response={"result": json.dumps(result, default=str)},
+                        )
+                    )
+                )
+
+            response = chat.send_message(response_parts)
 
         return {"agent": self.name, "findings": "Max iterations reached.", "tool_calls": tool_call_log}
 
