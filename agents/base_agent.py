@@ -14,6 +14,22 @@ import time
 from typing import Callable, Optional
 
 
+_GEMINI_UNSUPPORTED = {"default", "additionalProperties", "examples", "$schema", "format"}
+
+def _clean_schema_for_gemini(schema: dict) -> dict:
+    """Recursively strip fields that google-generativeai's Schema proto doesn't accept."""
+    if not isinstance(schema, dict):
+        return schema
+    cleaned = {k: v for k, v in schema.items() if k not in _GEMINI_UNSUPPORTED}
+    if "properties" in cleaned:
+        cleaned["properties"] = {
+            k: _clean_schema_for_gemini(v) for k, v in cleaned["properties"].items()
+        }
+    if "items" in cleaned:
+        cleaned["items"] = _clean_schema_for_gemini(cleaned["items"])
+    return cleaned
+
+
 def _to_openai_tools(anthropic_tools: list) -> list:
     """Convert Anthropic tool schema → OpenAI/Groq format."""
     result = []
@@ -115,8 +131,7 @@ class BaseAgent:
         if self.tools:
             decls = []
             for t in self.tools:
-                schema = dict(t["input_schema"])
-                schema.pop("additionalProperties", None)
+                schema = _clean_schema_for_gemini(t["input_schema"])
                 decls.append({
                     "name": t["name"],
                     "description": t["description"],
