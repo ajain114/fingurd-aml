@@ -182,7 +182,12 @@ ALERTS = {
 }
 
 
-def get_api_key() -> str:
+def get_api_key(provider: str = "anthropic") -> str:
+    if provider == "groq":
+        try:
+            return st.secrets["GROQ_API_KEY"]
+        except Exception:
+            return os.getenv("GROQ_API_KEY", "")
     try:
         return st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
@@ -220,7 +225,7 @@ with st.sidebar:
     if use_groq:
         st.info("Groq is 100% free — get a key at **console.groq.com** (no credit card)", icon="🆓")
         api_key = st.text_input(
-            "Groq API Key", value=os.getenv("GROQ_API_KEY", ""), type="password",
+            "Groq API Key", value=get_api_key("groq"), type="password",
             help="console.groq.com → API Keys → Create"
         )
         model = st.selectbox("Model", [
