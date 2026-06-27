@@ -257,8 +257,8 @@ with st.sidebar:
 
 
 # ── Main content tabs ─────────────────────────────────────────────────────────
-tab_investigate, tab_arch, tab_bedrock = st.tabs([
-    "🔍 Investigate", "🏗️ Architecture", "☁️ Bedrock Production Code"
+tab_investigate, tab_custom, tab_rules, tab_arch, tab_bedrock = st.tabs([
+    "🔍 Investigate", "🧪 Custom Case", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"
 ])
 
 
@@ -498,6 +498,375 @@ with tab_investigate:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2: CUSTOM CASE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_custom:
+    st.markdown("### 🧪 Custom Case — Enter Your Own Client Data")
+    st.markdown(
+        "Fill in the fields below to test the risk scoring engine on any scenario. "
+        "The same 5-factor rule engine used on the demo cases will run on your inputs."
+    )
+
+    with st.form("custom_case_form"):
+        st.markdown("#### Account Basics")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            cc_name       = st.text_input("Cardholder Name", value="John Doe")
+            cc_product    = st.text_input("Card Product", value="Synchrony Amazon Store Card")
+        with c2:
+            cc_limit      = st.number_input("Credit Limit ($)", min_value=500, max_value=50000, value=8000, step=500)
+            cc_utilization= st.slider("Current Utilization (%)", 0, 100, 30)
+        with c3:
+            cc_days_open  = st.number_input("Account Age (days)", min_value=1, max_value=3650, value=120)
+            cc_cli_count  = st.number_input("Credit Limit Increases (CLIs) in last 90 days", min_value=0, max_value=10, value=0)
+
+        st.divider()
+        st.markdown("#### Bust-Out Signals")
+        b1, b2, b3 = st.columns(3)
+        with b1:
+            bo_score      = st.slider("Bust-Out Score (0–100)", 0, 100, 0,
+                                      help="Overall bust-out pattern score from transaction analysis")
+            bo_detected   = st.checkbox("Bust-Out Pattern Detected", value=False)
+        with b2:
+            gift_cards    = st.number_input("Gift Card Purchases (last 10 days, $)", min_value=0, max_value=30000, value=0, step=100)
+            cash_advance  = st.number_input("Cash Advances (last 10 days, $)", min_value=0, max_value=20000, value=0, step=100)
+        with b3:
+            phone_status  = st.selectbox("Phone Status", ["ACTIVE", "DISCONNECTED", "UNKNOWN"])
+            email_status  = st.selectbox("Email Status", ["ACTIVE", "BOUNCE", "UNKNOWN"])
+
+        st.divider()
+        st.markdown("#### Identity Verification")
+        i1, i2 = st.columns(2)
+        with i1:
+            idv_score     = st.slider("IDV Score (LexisNexis/FraudIQ, 0–100)", 0, 100, 85,
+                                      help="Higher = more verified. Below 60 triggers high identity risk.")
+            ssn_anomaly   = st.checkbox("SSN Issuance Anomaly", value=False,
+                                        help="SSN issued after cardholder's stated birthdate, or in wrong state")
+        with i2:
+            ofac_hit      = st.checkbox("OFAC SDN Watchlist Hit", value=False)
+            fincen_hit    = st.checkbox("FinCEN 314(a) Hit", value=False)
+
+        st.divider()
+        st.markdown("#### MCC (Merchant Category Code) Risk")
+        m1, m2 = st.columns(2)
+        with m1:
+            high_risk_pct = st.slider("% of Recent Spend in HIGH-Risk MCCs", 0, 100, 0,
+                                      help="High-risk MCCs: Gift cards (5999_GIFT), ATM (6011), Jewelry (5094), Western Union (6051)")
+            high_risk_vol = st.number_input("High-Risk MCC Total Volume ($)", min_value=0, max_value=50000, value=0, step=100)
+        with m2:
+            total_vol     = st.number_input("Total Recent Spend ($)", min_value=0, max_value=50000, value=1000, step=100)
+            st.markdown("""
+            **HIGH-risk MCCs:**
+            `6011` ATM Cash Advance
+            `5999_GIFT` Gift Cards
+            `5094` Jewelry / Precious Metals
+            `6051` Western Union / Crypto
+            `7995` Gambling
+            """)
+
+        st.divider()
+        st.markdown("#### Device & Login Signals")
+        d1, d2 = st.columns(2)
+        with d1:
+            device_flag   = st.selectbox("Device Flag", [
+                "CLEAN",
+                "NEW_DEVICE_POST_CONTACT_CHANGE",
+                "MULTIPLE_DEVICE_SWITCH",
+            ], help="NEW_DEVICE_POST_CONTACT_CHANGE is the primary ATO signal")
+        with d2:
+            ip_flag       = st.selectbox("IP Anomaly Flag", ["None", "TOR_EXIT_NODE", "VPN_DETECTED", "GEO_MISMATCH"])
+            velocity_flag = st.selectbox("Login Velocity Flag", ["None", "HIGH_VELOCITY", "BRUTE_FORCE_ATTEMPT"])
+
+        st.divider()
+        st.markdown("#### Peer Comparison")
+        p1, p2 = st.columns(2)
+        with p1:
+            peer_ratio    = st.number_input("Spend Ratio vs Peer Group (e.g. 3.5 = 3.5x above average)",
+                                            min_value=0.1, max_value=50.0, value=1.0, step=0.5)
+        with p2:
+            account_spend = st.number_input("Account Monthly Spend ($)", min_value=0, max_value=50000, value=500, step=100)
+            peer_avg      = st.number_input("Peer Group Avg Monthly Spend ($)", min_value=1, max_value=10000, value=500, step=50)
+
+        submitted = st.form_submit_button("▶ Run Risk Rules", type="primary", use_container_width=True)
+
+    if submitted:
+        from tools.risk_scorer import compute_risk_score
+
+        bust_indicators = []
+        if bo_detected:
+            bust_indicators.append("Bust-out pattern detected")
+        if gift_cards > 0:
+            bust_indicators.append(f"Gift card purchases: ${gift_cards:,.0f}")
+        if cash_advance > 0:
+            bust_indicators.append(f"Cash advances: ${cash_advance:,.0f}")
+        if phone_status == "DISCONNECTED":
+            bust_indicators.append("Phone disconnected")
+        if email_status == "BOUNCE":
+            bust_indicators.append("Email bouncing")
+
+        custom_bust  = {"bust_out_score": bo_score, "bust_out_detected": bo_detected, "indicators": bust_indicators or ["None"]}
+        custom_cust  = {"utilization_pct": cc_utilization, "phone_status": phone_status, "email_status": email_status}
+        custom_peer  = {"spend_ratio_vs_peer": peer_ratio, "account_monthly_spend": account_spend, "peer_avg_monthly_spend": peer_avg}
+        custom_idv   = {
+            "idv_score": idv_score, "overall": f"IDV {'PASS' if idv_score >= 70 else 'PARTIAL' if idv_score >= 50 else 'FAIL'}",
+            "ssn_issuance_anomaly": ssn_anomaly, "ssn_detail": "SSN issued post-DOB in mismatched state" if ssn_anomaly else "",
+        }
+        custom_dev   = {
+            "device_flag": device_flag,
+            "ip_flag": None if ip_flag == "None" else ip_flag,
+            "velocity_flag": None if velocity_flag == "None" else velocity_flag,
+        }
+        custom_mcc   = {"high_risk_pct": high_risk_pct, "high_risk_mcc_volume": high_risk_vol, "total_volume": total_vol}
+
+        ra = compute_risk_score(
+            txn_data={}, customer_data=custom_cust, bust_out_data=custom_bust,
+            peer_data=custom_peer, identity_data=custom_idv, device_data=custom_dev, mcc_data=custom_mcc
+        )
+
+        # ── Result display ────────────────────────────────────────────────────
+        score_color = {"CRITICAL": "#dc3545", "HIGH": "#fd7e14", "MEDIUM": "#ffc107", "LOW": "#28a745"}.get(ra.risk_level, "#7ab3e0")
+        st.markdown(f"""
+        <div style="background:#1a1f2e;border:2px solid {score_color};border-radius:10px;padding:24px;margin:16px 0">
+            <div style="display:flex;align-items:center;gap:24px">
+                <div style="text-align:center">
+                    <div style="font-size:52px;font-weight:900;color:{score_color};line-height:1">{ra.overall_score}</div>
+                    <div style="font-size:11px;color:#9aa3b0;margin-top:4px">RISK SCORE / 100</div>
+                </div>
+                <div>
+                    <div class="risk-badge-{ra.risk_level}" style="margin-bottom:8px">{ra.risk_level}</div>
+                    <div style="color:#c8d6e5;font-size:14px;font-weight:600">{ra.fraud_type}</div>
+                    <div style="color:{'#dc3545' if ra.sar_recommended else '#28a745'};font-size:13px;margin-top:4px">
+                        {'⚡ SAR FILING RECOMMENDED' if ra.sar_recommended else '✓ SAR Not Required'}
+                    </div>
+                </div>
+            </div>
+            <div style="color:#9aa3b0;font-size:13px;margin-top:16px">{ra.recommendation}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### Factor Breakdown")
+        for f in ra.factors:
+            bar_color = "#dc3545" if f.score >= 80 else "#fd7e14" if f.score >= 60 else "#ffc107" if f.score >= 40 else "#28a745"
+            pct = f.score
+            weighted = round(f.score * f.weight)
+            with st.expander(f"**{f.name}** — score {f.score}/100 × weight {int(f.weight*100)}% = **{weighted} pts**"):
+                st.markdown(f"""
+                <div style="background:#111827;border-radius:6px;height:8px;margin:4px 0 12px 0;overflow:hidden">
+                    <div style="width:{pct}%;height:100%;background:{bar_color};border-radius:6px"></div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.markdown(f"**Detail:** {f.detail}")
+                st.markdown(f"**Evidence:** {f.evidence}")
+
+        st.markdown("---")
+        st.markdown("##### Rule Engine Trace (what triggered each factor)")
+        if ofac_hit:
+            st.error("OFAC SDN HIT — immediate account freeze required regardless of score")
+        if fincen_hit:
+            st.warning("FinCEN 314(a) HIT — mandatory 10-day hold, law enforcement notification required")
+        if ssn_anomaly:
+            st.warning("SSN Issuance Anomaly — +20 points added to Identity Risk factor")
+        if bo_detected:
+            st.warning("Bust-Out pattern detected — Factor 1 score anchored to bust-out score input")
+        if device_flag == "NEW_DEVICE_POST_CONTACT_CHANGE":
+            st.warning("ATO signal: New device after contact change — Factor 4 score set to 70+")
+        if device_flag == "MULTIPLE_DEVICE_SWITCH":
+            st.warning("Multiple device switches — Factor 4 score set to 85+")
+        if ip_flag and ip_flag != "None":
+            st.warning(f"IP anomaly flag: {ip_flag} — +15 added to Device factor")
+        if velocity_flag and velocity_flag != "None":
+            st.warning(f"Velocity flag: {velocity_flag} — +20 added to Device factor")
+        if high_risk_pct >= 60:
+            st.warning(f"MCC risk: {high_risk_pct}% of spend in HIGH-risk MCCs → MCC factor score = 95")
+        elif high_risk_pct >= 40:
+            st.info(f"MCC risk: {high_risk_pct}% of spend in HIGH-risk MCCs → MCC factor score = 75")
+        if peer_ratio >= 10:
+            st.warning(f"Peer anomaly: {peer_ratio}x above peer group → Peer factor score = 95")
+        elif peer_ratio >= 5:
+            st.info(f"Peer anomaly: {peer_ratio}x above peer group → Peer factor score = 75")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3: RISK RULES
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_rules:
+    st.markdown("### 📋 Risk Rules Reference")
+    st.markdown("All rules used by the FinGuard scoring engine. Every rule is independently auditable — meets **Federal Reserve SR 11-7** Model Risk Management requirements.")
+
+    # ── Decision Thresholds ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Decision Thresholds")
+    st.markdown("""
+    | Score Range | Risk Level | SAR Required | Action |
+    |---|---|---|---|
+    | **80 – 100** | 🔴 CRITICAL | Yes — mandatory | Freeze account immediately. File SAR within 30 days. Escalate to BSA Officer + Fraud Ops. |
+    | **60 – 79** | 🟠 HIGH | Yes — recommended | Strong fraud indicators. Recommend SAR filing. Initiate contact verification. Enhanced monitoring. |
+    | **40 – 59** | 🟡 MEDIUM | No | Enhanced monitoring. Request cardholder contact. Re-evaluate in 15 days. |
+    | **0 – 39** | 🟢 LOW | No | No immediate action. Continue standard monitoring. |
+    """)
+
+    # ── 5-Factor Model ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### 5-Factor Scoring Model (Weighted)")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("""
+        **Factor 1 — Bust-Out Pattern (Weight: 30%)**
+
+        | Condition | Points Added |
+        |---|---|
+        | Bust-out score from transaction engine | 0–100 (direct input) |
+        | Phone DISCONNECTED | +shown in detail |
+        | Email BOUNCE | +shown in detail |
+
+        *Highest weight — bust-out is the primary fraud type in Synchrony PLCC portfolio.*
+        """)
+
+        st.markdown("""
+        **Factor 3 — MCC Risk Profile (Weight: 20%)**
+
+        | % of Spend in HIGH-Risk MCCs | Score |
+        |---|---|
+        | ≥ 60% | 95 |
+        | 40% – 59% | 75 |
+        | 20% – 39% | 45 |
+        | < 20% | 15 |
+        """)
+
+        st.markdown("""
+        **Factor 5 — Spend Velocity vs Peer (Weight: 10%)**
+
+        | Spend vs Peer Group Average | Score |
+        |---|---|
+        | ≥ 10x above average | 95 |
+        | 5x – 9.9x | 75 |
+        | 3x – 4.9x | 50 |
+        | < 3x | 15 |
+        """)
+
+    with col2:
+        st.markdown("""
+        **Factor 2 — Identity Verification (Weight: 25%)**
+
+        | Condition | Score |
+        |---|---|
+        | Base score = 100 – IDV score | 0–100 |
+        | SSN issuance anomaly detected | +20 (capped at 100) |
+
+        *IDV score comes from LexisNexis/FraudIQ equivalent.*
+        *IDV 85 → identity risk score = 15 (low)*
+        *IDV 40 → identity risk score = 60 (high)*
+        """)
+
+        st.markdown("""
+        **Factor 4 — Device & Velocity (Weight: 15%)**
+
+        | Condition | Base Score |
+        |---|---|
+        | `CLEAN` — no device flag | 10 |
+        | `NEW_DEVICE_POST_CONTACT_CHANGE` | 70 ← ATO signal |
+        | `MULTIPLE_DEVICE_SWITCH` | 85 |
+
+        | Add-on Flag | Additional Points |
+        |---|---|
+        | IP anomaly (TOR, VPN, Geo mismatch) | +15 |
+        | Login velocity flag | +20 |
+        | Combined max | 100 |
+        """)
+
+        st.markdown("""
+        **Weighted Formula:**
+        ```
+        Overall = (F1 × 0.30) + (F2 × 0.25) + (F3 × 0.20)
+                + (F4 × 0.15) + (F5 × 0.10)
+        ```
+        """)
+
+    # ── Fraud Type Classification ──────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Fraud Type Classification Rules")
+    st.markdown("""
+    The engine classifies fraud type in this priority order:
+
+    | Priority | Fraud Type | Trigger Condition |
+    |---|---|---|
+    | 1st | **Bust-Out Fraud** | `bust_out_detected = True` |
+    | 2nd | **Account Takeover (ATO)** | `device_flag = NEW_DEVICE_POST_CONTACT_CHANGE` |
+    | 3rd | **Synthetic Identity Fraud** | `ssn_issuance_anomaly = True` |
+    | Default | **Suspicious Activity** | None of the above |
+    """)
+
+    # ── MCC Risk Reference ─────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### MCC Code Risk Classification")
+    st.markdown("""
+    | MCC Code | Merchant Type | Risk Level | Why HIGH risk |
+    |---|---|---|---|
+    | `6011` | ATM Cash Advance | 🔴 HIGH | Cash = untraceable, instant liquidity for fraudster |
+    | `6010` | Manual Cash Advance | 🔴 HIGH | Same as ATM |
+    | `5999_GIFT` | Gift Cards / Prepaid | 🔴 HIGH | #1 bust-out tool — resold instantly at 80-90 cents on dollar |
+    | `5094` | Jewelry / Precious Metals | 🔴 HIGH | High value, untraceable, easy resale |
+    | `6051` | Western Union / Money Orders / Crypto | 🔴 HIGH | Classic layering vehicle in AML typologies |
+    | `7995` | Gambling / Lottery | 🔴 HIGH | Regulated activity, often co-occurs with structuring |
+    | `5734` | Computer / Electronics | 🟡 MEDIUM | Resaleable goods, elevated in bust-out exits |
+    | `5999` | Miscellaneous Retail | 🟡 MEDIUM | Catch-all; elevated when off-network |
+    | `4816` | Online Services | 🟡 MEDIUM | Subscription fraud vector |
+    | `5200` | Home Supply (Lowe's) | 🟢 LOW | Expected spend for Lowe's card product |
+    | `5411` | Grocery Stores | 🟢 LOW | Normal everyday spend |
+    | `5712` | Furniture (Ashley) | 🟢 LOW | Expected spend for Ashley card product |
+    | `5945` | Hobby / Toy Shops | 🟢 LOW | Normal retail |
+    """)
+
+    # ── Alert Trigger Rules ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Alert Trigger Rules (Transaction Monitoring)")
+    st.markdown("""
+    | Rule ID | Rule Name | Trigger Condition | Fraud Type |
+    |---|---|---|---|
+    | RULE-BUF-001 | Bust-Out Utilization Spike | Utilization jumps > 80% within 10 days on account < 180 days old | Bust-Out |
+    | RULE-GFT-002 | Gift Card Velocity | Gift card purchases > $500 within 7 days | Bust-Out |
+    | RULE-CNT-003 | Contact Unreachable | Phone DISCONNECTED **and** email BOUNCE simultaneously | Bust-Out |
+    | RULE-ATO-001 | Multi-Field Contact Change | 3+ contact fields (address, phone, email) changed within 24 hours | ATO |
+    | RULE-ATO-002 | New Device Post Change | Login from new device within 7 days of contact change | ATO |
+    | RULE-CA-001 | Cash Advance Surge | Cash advance ≥ $2,000 on account with no prior cash advance history | ATO / Bust-Out |
+    | RULE-MUL-001 | Third-Party Payment | Payment received from business entity not linked to cardholder | Money Mule |
+    | RULE-MCC-001 | High-Risk MCC Cluster | ≥ 3 high-risk MCC types within 30 days | Money Mule / AML |
+    | RULE-WU-001 | Money Transfer Service | Any transaction at MCC 6051 (Western Union, MoneyGram) | AML |
+    | RULE-CLI-001 | Rapid CLI Abuse | 2+ credit limit increases within 90 days of account opening | Bust-Out |
+    | RULE-SSN-001 | SSN Issuance Anomaly | SSN issued after stated birthdate or in mismatched state | Synthetic Identity |
+    """)
+
+    # ── Mandatory Override Rules ───────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Mandatory Override Rules (Score-Independent)")
+    st.warning(
+        "These rules trigger mandatory action regardless of the overall risk score. "
+        "They cannot be overridden by a low score."
+    )
+    st.markdown("""
+    | Rule | Condition | Mandatory Action |
+    |---|---|---|
+    | OFAC SDN Hit | Cardholder name/SSN matches OFAC Specially Designated Nationals list | Immediate account freeze. Report to OFAC within 10 business days. |
+    | FinCEN 314(a) | Subject of active FinCEN law enforcement request | 10-day information hold. Cannot tip off subject. Law enforcement notification. |
+    | SAR Deadline | Score ≥ 60 investigation completed | SAR must be filed within **30 calendar days** of detection (FinCEN rule). |
+    """)
+
+    # ── Regulatory Basis ──────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Regulatory Basis")
+    st.markdown("""
+    | Regulation | Applies To | What it requires |
+    |---|---|---|
+    | **Bank Secrecy Act (BSA)** | All US banks | SAR filing for suspicious activity ≥ $5,000 |
+    | **FinCEN SAR Rule (31 CFR 1020.320)** | Banks incl. Synchrony | 30-day filing deadline, 5-year record retention |
+    | **Federal Reserve SR 11-7** | Model Risk Management | All scoring models must be explainable, validated, documented |
+    | **OFAC Regulations (31 CFR 501)** | All US persons & entities | Freeze assets of SDN-listed individuals |
+    | **FinCEN 314(a)** | BSA-regulated institutions | Respond to law enforcement information requests within 14 days |
+    | **FATF 40 Recommendations** | International standard | Typology-based risk assessment, enhanced due diligence |
+    """)
+
 # TAB 2: ARCHITECTURE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_arch:
