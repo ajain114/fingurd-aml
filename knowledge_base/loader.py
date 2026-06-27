@@ -31,7 +31,7 @@ def _get_collection():
 
     _client = chromadb.Client()  # in-memory
     ef = embedding_functions.DefaultEmbeddingFunction()
-    _collection = _client.create_collection(
+    _collection = _client.get_or_create_collection(
         name="aml_typologies",
         embedding_function=ef,
         metadata={"hnsw:space": "cosine"},

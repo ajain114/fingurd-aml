@@ -9,6 +9,7 @@ Bedrock in production uses the Anthropic path — just swap the client init.
 """
 
 import json
+import re
 from typing import Callable, Optional
 
 
@@ -117,7 +118,50 @@ class BaseAgent:
                 kwargs["tools"] = openai_tools
                 kwargs["tool_choice"] = "auto"
 
-            response = self.client.chat.completions.create(**kwargs)
+            try:
+                response = self.client.chat.completions.create(**kwargs)
+            except Exception as e:
+                # Groq/Llama sometimes generates tool calls in legacy XML format
+                # e.g. <function=get_customer_profile={"account_id": "CC-4821"}</function>
+                # Groq rejects this as a 400. We parse and execute it manually.
+                err_str = str(e)
+                if "failed_generation" not in err_str:
+                    raise
+
+                raw_text = err_str
+                try:
+                    # Groq error body is embedded in the exception string as JSON after "Response: "
+                    body_str = err_str.split("Response: ", 1)[1] if "Response: " in err_str else "{}"
+                    body = json.loads(body_str)
+                    raw_text = body.get("error", {}).get("failed_generation", err_str)
+                except Exception:
+                    pass
+
+                # Parse <function=NAME={"k": "v"}</function> — Llama legacy format
+                tool_matches = re.findall(r"<function=(\w+)=(\{[^<]*\})", raw_text)
+                if not tool_matches:
+                    raise
+
+                messages.append({"role": "assistant", "content": raw_text})
+                for t_name, t_args_str in tool_matches:
+                    try:
+                        t_input = json.loads(t_args_str)
+                    except Exception:
+                        t_input = {}
+                    if self.on_tool_call:
+                        self.on_tool_call(t_name, t_input)
+                    handler = self.tool_registry.get(t_name)
+                    result = handler(**t_input) if handler else {"error": f"Unknown tool: {t_name}"}
+                    if self.on_tool_result:
+                        self.on_tool_result(t_name, result)
+                    tool_call_log.append({"tool": t_name, "input": t_input})
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": f"call_{t_name}",
+                        "content": json.dumps(result, default=str),
+                    })
+                continue  # feed tool results back into next iteration
+
             choice = response.choices[0]
             msg = choice.message
 

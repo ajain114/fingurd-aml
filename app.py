@@ -229,10 +229,10 @@ with st.sidebar:
             help="console.groq.com → API Keys → Create"
         )
         model = st.selectbox("Model", [
+            "mixtral-8x7b-32768",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
-            "mixtral-8x7b-32768",
-        ], help="llama-3.3-70b = best quality | 8b-instant = fastest")
+        ], help="mixtral = most reliable tool calling | llama-3.3-70b = best quality")
         st.caption("⚡ Groq runs Llama on custom LPU chips — fast & free")
         st.caption("🏦 In production: swap to Bedrock Claude (same tool schemas)")
     else:
