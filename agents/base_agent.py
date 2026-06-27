@@ -10,6 +10,7 @@ Bedrock in production uses the Anthropic path — just swap the client init.
 
 import json
 import re
+import time
 from typing import Callable, Optional
 
 
@@ -121,10 +122,40 @@ class BaseAgent:
             try:
                 response = self.client.chat.completions.create(**kwargs)
             except Exception as e:
+                err_str = str(e)
+
+                # 429 rate limit — wait and retry once
+                if "429" in err_str or "rate_limit" in err_str.lower() or "quota" in err_str.lower():
+                    time.sleep(3)
+                    try:
+                        response = self.client.chat.completions.create(**kwargs)
+                    except Exception as e2:
+                        raise e2
+                    # if retry succeeded, fall through to process response below
+                    choice = response.choices[0]
+                    msg = choice.message
+                    if not msg.tool_calls:
+                        return {"agent": self.name, "findings": msg.content or "", "tool_calls": tool_call_log}
+                    messages.append(msg)
+                    for tc in msg.tool_calls:
+                        tool_name = tc.function.name
+                        try:
+                            tool_input = json.loads(tc.function.arguments)
+                        except Exception:
+                            tool_input = {}
+                        if self.on_tool_call:
+                            self.on_tool_call(tool_name, tool_input)
+                        handler = self.tool_registry.get(tool_name)
+                        result = handler(**tool_input) if handler else {"error": f"Unknown tool: {tool_name}"}
+                        if self.on_tool_result:
+                            self.on_tool_result(tool_name, result)
+                        tool_call_log.append({"tool": tool_name, "input": tool_input})
+                        messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result, default=str)})
+                    continue
+
                 # Groq/Llama sometimes generates tool calls in legacy XML format
                 # e.g. <function=get_customer_profile={"account_id": "CC-4821"}</function>
                 # Groq rejects this as a 400. We parse and execute it manually.
-                err_str = str(e)
                 if "failed_generation" not in err_str:
                     raise
 

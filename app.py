@@ -228,10 +228,11 @@ with st.sidebar:
             help="aistudio.google.com → Get API Key (sign in with Google)"
         )
         model = st.selectbox("Model", [
-            "gemini-2.0-flash",
             "gemini-1.5-flash",
+            "gemini-2.0-flash",
             "gemini-1.5-pro",
-        ], help="gemini-2.0-flash = fastest + smartest | 1.5-pro = highest quality")
+            "gemini-2.0-flash-lite",
+        ], help="gemini-1.5-flash = most reliable free tier | 2.0-flash = faster but may hit quota")
         st.caption("In production: swap client to Bedrock Claude — same tool schemas")
 
     elif provider.startswith("Groq"):
