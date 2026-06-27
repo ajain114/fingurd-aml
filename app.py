@@ -214,51 +214,17 @@ with st.sidebar:
     st.divider()
     st.markdown("### Configuration")
 
-    provider = st.radio(
-        "LLM Provider",
-        ["Gemini (Free — 1M tokens/day)", "Groq (Free — 100K tokens/day)", "Anthropic (Claude)"],
-        help="Gemini = best free option. Groq = faster but 100K daily cap. Anthropic = same as Bedrock.",
+    st.session_state.provider = "anthropic"
+    st.info("Claude — same model family that powers **Amazon Bedrock**", icon="☁️")
+    api_key = st.text_input(
+        "Anthropic API Key", value=get_api_key(), type="password",
+        help="console.anthropic.com → API Keys"
     )
-
-    if provider.startswith("Gemini"):
-        st.session_state.provider = "gemini"
-        st.info("Google Gemini — **1M tokens/day free**, no credit card. Get key at **aistudio.google.com**", icon="✨")
-        api_key = st.text_input(
-            "Gemini API Key", value=get_api_key("gemini"), type="password",
-            help="aistudio.google.com → Get API Key (sign in with Google)"
-        )
-        model = st.selectbox("Model", [
-            "gemini-1.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-pro",
-            "gemini-2.0-flash-lite",
-        ], help="gemini-1.5-flash = most reliable free tier | 2.0-flash = faster but may hit quota")
-        st.caption("In production: swap client to Bedrock Claude — same tool schemas")
-
-    elif provider.startswith("Groq"):
-        st.session_state.provider = "groq"
-        st.warning("Groq free tier: 100K tokens/day. Switch to Gemini if you hit the limit.", icon="⚠️")
-        api_key = st.text_input(
-            "Groq API Key", value=get_api_key("groq"), type="password",
-            help="console.groq.com → API Keys → Create"
-        )
-        model = st.selectbox("Model", [
-            "llama-3.3-70b-versatile",
-            "meta-llama/llama-4-scout-17b-16e-instruct",
-            "llama-3.1-8b-instant",
-        ], help="llama-3.3-70b = best quality | llama-4-scout = fast")
-
-    else:
-        st.session_state.provider = "anthropic"
-        st.info("Claude = same model that runs on **Amazon Bedrock**", icon="☁️")
-        api_key = st.text_input(
-            "Anthropic API Key", value=get_api_key(), type="password",
-            help="console.anthropic.com → API Keys"
-        )
-        model = st.selectbox("Model", [
-            "claude-3-5-sonnet-20241022",
-            "claude-3-haiku-20240307",
-        ], help="3-5-sonnet = production quality | haiku = faster demo")
+    model = st.selectbox("Model", [
+        "claude-3-5-sonnet-20241022",
+        "claude-3-haiku-20240307",
+        "claude-3-opus-20240229",
+    ], help="3-5-sonnet = production quality | haiku = fastest | opus = most capable")
 
     st.session_state.api_key = api_key
     st.session_state.model = model
@@ -317,18 +283,8 @@ with tab_investigate:
             st.markdown(f"- `{rule}`")
 
         st.markdown("")
-        _provider = st.session_state.get("provider", "anthropic")
-        _key_names = {"gemini": "Gemini", "groq": "Groq", "anthropic": "Anthropic"}
-        _key_hints = {
-            "gemini": "aistudio.google.com → Get API Key",
-            "groq": "console.groq.com → API Keys",
-            "anthropic": "console.anthropic.com → API Keys",
-        }
         if not st.session_state.api_key:
-            st.error(
-                f"Add your **{_key_names.get(_provider, 'API')} API key** in the sidebar to run the investigation.  \n"
-                f"_{_key_hints.get(_provider, '')}_"
-            )
+            st.error("Add your **Anthropic API key** in the sidebar to run the investigation.  \n_console.anthropic.com → API Keys_")
         else:
             investigate_clicked = st.button(
                 "🤖 Launch Agent Investigation",
