@@ -317,8 +317,18 @@ with tab_investigate:
             st.markdown(f"- `{rule}`")
 
         st.markdown("")
+        _provider = st.session_state.get("provider", "anthropic")
+        _key_names = {"gemini": "Gemini", "groq": "Groq", "anthropic": "Anthropic"}
+        _key_hints = {
+            "gemini": "aistudio.google.com → Get API Key",
+            "groq": "console.groq.com → API Keys",
+            "anthropic": "console.anthropic.com → API Keys",
+        }
         if not st.session_state.api_key:
-            st.error("Add your Anthropic API key in the sidebar to run the investigation.")
+            st.error(
+                f"Add your **{_key_names.get(_provider, 'API')} API key** in the sidebar to run the investigation.  \n"
+                f"_{_key_hints.get(_provider, '')}_"
+            )
         else:
             investigate_clicked = st.button(
                 "🤖 Launch Agent Investigation",
