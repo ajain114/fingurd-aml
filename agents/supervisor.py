@@ -59,6 +59,12 @@ class Supervisor:
         if provider == "groq":
             from groq import Groq
             self.client = Groq(api_key=api_key)
+        elif provider == "gemini":
+            from openai import OpenAI
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            )
         else:
             self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model

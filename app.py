@@ -183,15 +183,16 @@ ALERTS = {
 
 
 def get_api_key(provider: str = "anthropic") -> str:
-    if provider == "groq":
-        try:
-            return st.secrets["GROQ_API_KEY"]
-        except Exception:
-            return os.getenv("GROQ_API_KEY", "")
+    key_map = {
+        "groq": "GROQ_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+    }
+    env_key = key_map.get(provider, "ANTHROPIC_API_KEY")
     try:
-        return st.secrets["ANTHROPIC_API_KEY"]
+        return st.secrets[env_key]
     except Exception:
-        return os.getenv("ANTHROPIC_API_KEY", "")
+        return os.getenv(env_key, "")
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -215,15 +216,27 @@ with st.sidebar:
 
     provider = st.radio(
         "LLM Provider",
-        ["Anthropic (Claude)", "Groq (Free)"],
-        help="Anthropic = same model as Amazon Bedrock (Claude). Groq = free tier, no card needed.",
-        horizontal=True,
+        ["Gemini (Free — 1M tokens/day)", "Groq (Free — 100K tokens/day)", "Anthropic (Claude)"],
+        help="Gemini = best free option. Groq = faster but 100K daily cap. Anthropic = same as Bedrock.",
     )
-    use_groq = provider == "Groq (Free)"
-    st.session_state.provider = "groq" if use_groq else "anthropic"
 
-    if use_groq:
-        st.info("Groq is 100% free — get a key at **console.groq.com** (no credit card)", icon="🆓")
+    if provider.startswith("Gemini"):
+        st.session_state.provider = "gemini"
+        st.info("Google Gemini — **1M tokens/day free**, no credit card. Get key at **aistudio.google.com**", icon="✨")
+        api_key = st.text_input(
+            "Gemini API Key", value=get_api_key("gemini"), type="password",
+            help="aistudio.google.com → Get API Key (sign in with Google)"
+        )
+        model = st.selectbox("Model", [
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+        ], help="gemini-2.0-flash = fastest + smartest | 1.5-pro = highest quality")
+        st.caption("In production: swap client to Bedrock Claude — same tool schemas")
+
+    elif provider.startswith("Groq"):
+        st.session_state.provider = "groq"
+        st.warning("Groq free tier: 100K tokens/day. Switch to Gemini if you hit the limit.", icon="⚠️")
         api_key = st.text_input(
             "Groq API Key", value=get_api_key("groq"), type="password",
             help="console.groq.com → API Keys → Create"
@@ -231,12 +244,11 @@ with st.sidebar:
         model = st.selectbox("Model", [
             "llama-3.3-70b-versatile",
             "meta-llama/llama-4-scout-17b-16e-instruct",
-            "qwen/qwen3-32b",
             "llama-3.1-8b-instant",
-        ], help="llama-3.3-70b = best quality | llama-4-scout = fast | qwen3 = alternative")
-        st.caption("⚡ Groq runs Llama on custom LPU chips — fast & free")
-        st.caption("🏦 In production: swap to Bedrock Claude (same tool schemas)")
+        ], help="llama-3.3-70b = best quality | llama-4-scout = fast")
+
     else:
+        st.session_state.provider = "anthropic"
         st.info("Claude = same model that runs on **Amazon Bedrock**", icon="☁️")
         api_key = st.text_input(
             "Anthropic API Key", value=get_api_key(), type="password",

@@ -55,7 +55,7 @@ class BaseAgent:
         self.on_tool_result = on_tool_result
 
     def run(self, user_message: str, context: str = "") -> dict:
-        if self.provider == "groq":
+        if self.provider in ("groq", "gemini"):
             return self._run_groq(user_message, context)
         return self._run_anthropic(user_message, context)
 
