@@ -51,14 +51,15 @@ Format your response exactly as:
 - Law Enforcement Referral: [Yes/No + reason]"""
 
 
-def build(client, model, on_tool_call=None, on_tool_result=None) -> BaseAgent:
+def build(client, model, on_tool_call=None, on_tool_result=None, provider="anthropic") -> BaseAgent:
     return BaseAgent(
         client=client,
         model=model,
         name="Case Writer Agent",
         system_prompt=SYSTEM_PROMPT,
-        tools=[],           # No tools — pure generation from context
+        tools=[],
         tool_registry={},
+        provider=provider,
         on_tool_call=on_tool_call,
         on_tool_result=on_tool_result,
     )

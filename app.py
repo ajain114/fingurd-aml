@@ -207,12 +207,40 @@ with st.sidebar:
 
     st.divider()
     st.markdown("### Configuration")
-    api_key = st.text_input("Anthropic API Key", value=get_api_key(), type="password",
-                             help="Get a free key at console.anthropic.com")
-    model = st.selectbox("Model", [
-        "claude-3-5-sonnet-20241022",
-        "claude-3-haiku-20240307",
-    ], help="claude-3-5-sonnet = production quality | haiku = faster demo")
+
+    provider = st.radio(
+        "LLM Provider",
+        ["Anthropic (Claude)", "Groq (Free)"],
+        help="Anthropic = same model as Amazon Bedrock (Claude). Groq = free tier, no card needed.",
+        horizontal=True,
+    )
+    use_groq = provider == "Groq (Free)"
+    st.session_state.provider = "groq" if use_groq else "anthropic"
+
+    if use_groq:
+        st.info("Groq is 100% free — get a key at **console.groq.com** (no credit card)", icon="🆓")
+        api_key = st.text_input(
+            "Groq API Key", value=os.getenv("GROQ_API_KEY", ""), type="password",
+            help="console.groq.com → API Keys → Create"
+        )
+        model = st.selectbox("Model", [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+        ], help="llama-3.3-70b = best quality | 8b-instant = fastest")
+        st.caption("⚡ Groq runs Llama on custom LPU chips — fast & free")
+        st.caption("🏦 In production: swap to Bedrock Claude (same tool schemas)")
+    else:
+        st.info("Claude = same model that runs on **Amazon Bedrock**", icon="☁️")
+        api_key = st.text_input(
+            "Anthropic API Key", value=get_api_key(), type="password",
+            help="console.anthropic.com → API Keys"
+        )
+        model = st.selectbox("Model", [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-haiku-20240307",
+        ], help="3-5-sonnet = production quality | haiku = faster demo")
+
     st.session_state.api_key = api_key
     st.session_state.model = model
 
@@ -336,6 +364,7 @@ with tab_investigate:
                 supervisor = Supervisor(
                     api_key=st.session_state.api_key,
                     model=st.session_state.model,
+                    provider=st.session_state.get("provider", "anthropic"),
                     on_step=on_step,
                 )
                 result = supervisor.investigate(alert["account_id"], alert["description"])

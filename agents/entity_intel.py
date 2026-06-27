@@ -167,7 +167,7 @@ TOOL_REGISTRY = {
 }
 
 
-def build(client, model, on_tool_call=None, on_tool_result=None) -> BaseAgent:
+def build(client, model, on_tool_call=None, on_tool_result=None, provider="anthropic") -> BaseAgent:
     return BaseAgent(
         client=client,
         model=model,
@@ -175,6 +175,7 @@ def build(client, model, on_tool_call=None, on_tool_result=None) -> BaseAgent:
         system_prompt=SYSTEM_PROMPT,
         tools=TOOLS,
         tool_registry=TOOL_REGISTRY,
+        provider=provider,
         on_tool_call=on_tool_call,
         on_tool_result=on_tool_result,
     )

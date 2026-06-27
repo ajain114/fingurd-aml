@@ -54,8 +54,13 @@ class Supervisor:
     Sequential chosen here for demo clarity — shows the reasoning chain.
     """
 
-    def __init__(self, api_key: str, model: str, on_step: Optional[Callable] = None):
-        self.client = anthropic.Anthropic(api_key=api_key)
+    def __init__(self, api_key: str, model: str, provider: str = "anthropic", on_step: Optional[Callable] = None):
+        self.provider = provider
+        if provider == "groq":
+            from groq import Groq
+            self.client = Groq(api_key=api_key)
+        else:
+            self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
         self.on_step = on_step or (lambda step, detail: None)
 
@@ -86,7 +91,7 @@ class Supervisor:
         self.on_step("agent_start", {"agent": "Transaction Risk Agent",
                                      "message": "Retrieving transaction history and detecting fraud patterns..."})
         on_call, on_result = self._make_step_callback(result, "Transaction Risk Agent")
-        txn_agent = txn_agent_mod.build(self.client, self.model, on_call, on_result)
+        txn_agent = txn_agent_mod.build(self.client, self.model, on_call, on_result, self.provider)
 
         txn_output = txn_agent.run(
             user_message=f"Investigate account {account_id}. Alert: {alert_description}. "
@@ -100,7 +105,7 @@ class Supervisor:
         self.on_step("agent_start", {"agent": "Entity Intelligence Agent",
                                      "message": "Profiling cardholder, screening watchlists, checking device signals..."})
         on_call, on_result = self._make_step_callback(result, "Entity Intelligence Agent")
-        entity_agent = entity_agent_mod.build(self.client, self.model, on_call, on_result)
+        entity_agent = entity_agent_mod.build(self.client, self.model, on_call, on_result, self.provider)
 
         entity_output = entity_agent.run(
             user_message=f"Investigate the cardholder for account {account_id}. "
@@ -114,7 +119,7 @@ class Supervisor:
         self.on_step("agent_start", {"agent": "AML Typology Agent",
                                      "message": "Searching AML knowledge base for pattern matches..."})
         on_call, on_result = self._make_step_callback(result, "AML Typology Agent")
-        typology_agent = typology_agent_mod.build(self.client, self.model, on_call, on_result)
+        typology_agent = typology_agent_mod.build(self.client, self.model, on_call, on_result, self.provider)
 
         typology_output = typology_agent.run(
             user_message=f"Based on the transaction and entity findings below, search the AML typology "
@@ -155,7 +160,7 @@ class Supervisor:
         self.on_step("agent_start", {"agent": "Case Writer Agent",
                                      "message": "Drafting SAR narrative and investigation summary..."})
         on_call, on_result = self._make_step_callback(result, "Case Writer Agent")
-        writer_agent = case_writer_mod.build(self.client, self.model, on_call, on_result)
+        writer_agent = case_writer_mod.build(self.client, self.model, on_call, on_result, self.provider)
 
         risk_summary = ""
         if result.risk_assessment:
