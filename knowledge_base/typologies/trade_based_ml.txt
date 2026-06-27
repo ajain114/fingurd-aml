@@ -1,0 +1,49 @@
+TYPOLOGY: TRADE-BASED MONEY LAUNDERING (TBML)
+Source: FATF Report on Trade-Based Money Laundering (Revised 2020) | FinCEN Advisory FIN-2014-A007
+Category: Integration Stage Money Laundering
+
+DEFINITION:
+Trade-based money laundering (TBML) is the process of disguising the proceeds of crime and moving value through the use of legitimate trade transactions. TBML exploits the enormous complexity of international trade and the limited capacity of customs and financial authorities to scrutinize individual transactions. It is considered one of the most significant and underreported forms of money laundering globally.
+
+KEY MECHANISMS:
+1. Over-Invoicing: Exporter charges higher price than actual market value; excess value moves to exporter
+2. Under-Invoicing: Exporter charges lower price; under-valued goods transfer value to importer
+3. Multiple Invoicing: Same goods invoiced multiple times to multiple parties
+4. Over/Under Shipment: Physical quantity of goods differs from what is documented
+5. Phantom Shipments: Payments made for goods that are never shipped (fictitious trade)
+
+RED FLAGS FOR FINANCIAL INSTITUTIONS:
+- Invoice amounts significantly above or below World Customs Organization (WCO) trade price database benchmarks
+- Goods described in vague terms (e.g., "electronics," "textiles," "general merchandise")
+- Payment routed through third-country banks unrelated to the trade transaction
+- Significant discrepancy between declared export value and amount financed
+- Same goods imported/exported repeatedly between the same counterparties
+- Counterparty entity has no verifiable export history or business registration
+- Single entity accounts for majority of trade with a specific country or sector
+- Payments made before goods are shipped (pre-payment risk)
+- Use of free trade zones to reduce documentation requirements
+
+PRICE ANOMALY THRESHOLDS (REGULATORY GUIDANCE):
+Financial institutions should investigate when declared unit prices deviate more than 25% from WCO trade price database benchmarks for the same goods category. Deviations exceeding 50% are considered severe and warrant immediate SAR consideration.
+
+HIGH-RISK SECTORS FOR TBML:
+- Consumer electronics (high value, standardized, easy to over-value)
+- Textiles and apparel (complex supply chains, varied quality grades)
+- Gold and precious metals (portable, fungible, high-value)
+- Agricultural commodities (significant price volatility exploited)
+- Luxury goods (subjective valuation)
+
+GEOGRAPHIC CONCENTRATION:
+- China: largest source of electronics TBML globally
+- Hong Kong: Free port, limited cargo inspection regime
+- UAE Free Zones: JAFZA used for re-export and document manipulation
+- Latin America: Black Market Peso Exchange (BMPE) variant prevalent
+
+DETECTION APPROACH:
+Compare declared trade invoice values against WCO Customs Valuation Database, HS Code pricing benchmarks, and market rate comparisons. Flag when same HS Code goods show price variation >25% from baseline in consecutive shipments from same supplier.
+
+REGULATORY REQUIREMENTS:
+Banks financing international trade should conduct Trade Finance Due Diligence (TFDD) including invoice verification, counterparty screening, and price plausibility analysis. FinCEN expects SAR filing when TBML indicators co-occur with high-risk counterparty or jurisdiction.
+
+CASE TYPOLOGY EXAMPLE:
+A US import company (TechTrade Import/Export LLC) makes three wire payments totaling $435,000 to a Hong Kong entity (Golden Gate Electronics HK) for "Consumer Electronics (500 units each)" at declared unit prices of $276–$304. WCO market price for the same electronics category is $95–$140 per unit — a discrepancy of 96–220%. The company has a prior SAR filing for similar activity and current adverse media regarding customs investigation. Domestic resale invoices to a US retail chain declare the same goods at $178/unit — less than half the acquisition cost, suggesting value transfer rather than legitimate trade profit.

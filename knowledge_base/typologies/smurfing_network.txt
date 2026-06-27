@@ -1,0 +1,44 @@
+TYPOLOGY: SMURFING NETWORK (COORDINATED CASH PLACEMENT)
+Source: Egmont Group Typologies Report 2022 | FATF Guidance on Money Laundering Through Real Estate and Retail Payments
+Category: Placement Stage — Coordinated Network Activity
+
+DEFINITION:
+A smurfing network is a money laundering arrangement in which a coordinator deploys multiple low-profile individuals ("smurfs") to deposit sub-threshold amounts across multiple accounts and institutions. The fragmented deposits are later aggregated and moved onward, typically via wire transfer or cryptocurrency. This typology exploits AML thresholds and the difficulty of connecting transactions across individuals.
+
+KEY RED FLAGS:
+- Single account receiving multiple small deposits from different individuals over a short period
+- Depositors have no apparent relationship to the account holder's stated business
+- Deposits are highly consistent in amount (±15% variation) suggesting coordination
+- All depositors opened accounts around the same time at the same institution
+- Geographic clustering: depositors use branches or ATMs in the same neighborhood
+- Rapid aggregation: deposits are followed by a single large outgoing wire within days
+- P2P payment platform (Zelle, Venmo, Cash App) used to coordinate transfers
+- Depositors' accounts show identical or near-identical activity patterns
+
+NETWORK IDENTIFICATION INDICATORS:
+- Graph analysis reveals hub-and-spoke structure with single aggregation account
+- Depositors lack independent transaction history beyond coordination payments
+- Device fingerprinting shows depositors logging into accounts from same IP/device
+- Multiple depositors listed at same address on account opening documents
+- Shared phone numbers or email domains across the network
+
+AGGREGATION AND EXTRACTION PATTERNS:
+1. Classic Aggregation: Cash deposits from smurfs, single outgoing wire
+2. P2P Aggregation: Peer-to-peer transfers replace cash, harder to detect
+3. Crypto Extraction: Aggregated funds converted to cryptocurrency for onward movement
+4. Mule Account Chain: Funds pass through additional mule accounts before final extraction
+
+COMMON EXTRACTION DESTINATIONS:
+- Offshore financial centres (Cayman Islands, BVI, Panama)
+- Cryptocurrency exchanges with weak KYC
+- International wire to shell companies
+- Purchase of high-value assets (real estate, luxury goods, art)
+
+SOCIAL ENGINEERING COMPONENT:
+Smurfs are often recruited through social media with promises of easy money ("money flipping"). Many are unwitting participants who face criminal liability. Red flags include unusual account activity by otherwise normal-profile customers.
+
+REGULATORY RESPONSE:
+FinCEN has designated coordinated smurfing as a priority AML concern. Financial institutions are expected to use network analysis tools to identify hub accounts. SAR filing on the hub account is required; referral of smurf accounts for investigation is recommended.
+
+CASE TYPOLOGY EXAMPLE:
+A personal checking account receives 11 peer-to-peer transfers (Zelle) and 2 cash deposits from 13 different individuals over 10 days, with amounts ranging from $2,750 to $3,200 (total: $34,500). Within 4 days of the last deposit, a single wire transfer of $41,500 is sent to a Cayman Islands investment fund. The account holder's stated occupation is "freelance consultant" with no prior high-volume activity. Peer accounts show matching onboarding patterns and minimal independent activity.

@@ -1,0 +1,62 @@
+TYPOLOGY: ACCOUNT TAKEOVER (ATO) — CREDIT CARD
+Source: FinCEN Advisory FIN-2016-A005 | CISA Credential Stuffing Alert 2023 | Javelin Strategy ATO Report 2024
+Category: Identity Theft / Account Fraud / Money Laundering Enablement
+
+DEFINITION:
+Account takeover (ATO) occurs when a fraudster gains unauthorized access to an existing legitimate cardholder's account — typically through phishing, credential stuffing, social engineering, or data breach exploitation. Unlike new account fraud, ATO targets accounts with established credit histories and available credit, making them immediately valuable. ATO accounts are often used as money mule conduits, converting available credit into cash or high-value goods.
+
+ATO is particularly impactful for Private Label Credit Card (PLCC) issuers because:
+1. Established accounts have earned higher credit limits
+2. Loyal cardholders have available credit from responsible usage
+3. Partner retailers may not flag unusual activity if it appears on-brand
+4. ATO can be difficult to distinguish from genuine cardholder travel or behavior change
+
+ATO ATTACK VECTORS:
+1. Credential Stuffing: Automated use of leaked username/password combinations from data breaches
+2. Phishing/Vishing: Fraudster impersonates bank, tricks cardholder into revealing credentials
+3. SIM Swapping: Fraudster convinces carrier to port victim's number, intercepts OTP
+4. Mail Interception: Fraudster intercepts replacement card or statement
+5. Insider Threat: Compromised employee with access to cardholder data
+
+BEHAVIORAL RED FLAGS (PRE-ATO):
+- Multiple failed login attempts followed by successful login
+- Login from new device or IP address significantly different from cardholder's profile
+- Login from high-risk country or anonymous proxy/VPN
+- Password reset request from unrecognized device
+- OTP sent to phone not matching the cardholder's registered number
+
+BEHAVIORAL RED FLAGS (POST-ATO):
+- Contact information changed (address, phone, email) within 24-48 hours of suspicious login
+- New card requested to alternate/new address shortly after contact change
+- First-ever cash advance taken within days of contact change
+- High-value gift card purchases immediately after account access
+- Spending in geographic location inconsistent with cardholder's history
+- Multiple ATM cash advance withdrawals in same day (different ATMs, different banks)
+- Off-network spending surge on PLCC (purchases at non-partner retailers)
+
+VELOCITY THRESHOLDS FOR ATO DETECTION:
+- Contact change + new address + first cash advance within 72 hours: HIGH RISK (>85% precision for ATO)
+- 2+ contact fields changed + gift card purchase: HIGH RISK
+- ATM cash advances in new city + online purchase in different city same day: HIGH RISK
+
+MONEY MULE CONNECTION:
+ATO accounts are frequently used in money mule schemes:
+- Third-party payment received to credit card (unusual) — frees up available credit
+- Freed credit immediately drawn down via cash advances or gift cards
+- Cash/gift cards forwarded to fraud ring coordinator
+- Victim cardholder left with maxed-out card and potential liability dispute
+
+THIRD-PARTY PAYMENT RED FLAGS:
+- Payment originates from account not linked to cardholder in onboarding data
+- Paying entity is a business, LLC, or trust (not a personal account)
+- Payment amount unusually large relative to cardholder's typical payment pattern
+- Followed within 1-7 days by equivalent cash advances or high-risk purchases
+
+REGULATORY AND SAR GUIDANCE:
+SAR filing required when ATO confirmed or reasonably suspected. File within 30 days.
+Include: nature of account compromise, estimated loss/exposure, any recovery action taken.
+Cross-reference with FinCEN 314(b) information sharing for coordinated investigations.
+Report to relevant law enforcement if total loss exceeds $25,000 (FBI IC3 referral recommended).
+
+CASE TYPOLOGY EXAMPLE:
+A 5-year-old Synchrony PLCC account with excellent payment history (58 on-time, 1 late) shows three contact information changes within 24 hours (address: Tampa → Orlando; phone: old → new; email: personal → professional). The new address is unverified. Within 5 days of the changes: $1,900 in gift card purchases at the partner retailer, two cash advances totaling $5,800 at ATMs in Orlando (consistent with new address, inconsistent with cardholder's Tampa-area profile), and $2,220 in off-network purchases (Walmart, Amazon). Total exposure: $9,920 drawn against a $12,000 credit limit on an account that typically carries <15% utilization.

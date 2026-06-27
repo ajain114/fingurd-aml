@@ -1,0 +1,48 @@
+TYPOLOGY: LAYERING VIA INTERNATIONAL WIRE TRANSFERS
+Source: FATF Report on Money Laundering Through the Banking Sector | FinCEN Advisory FIN-2018-A002
+Category: Layering Stage Money Laundering
+
+DEFINITION:
+Layering is the second stage of money laundering in which criminals attempt to distance illicit funds from their source through a series of complex financial transactions. International wire transfers are a preferred layering mechanism due to transaction speed, cross-jurisdictional complexity, and the challenges of coordinating AML responses across multiple regulatory regimes.
+
+KEY RED FLAGS:
+- Wire transfers to multiple high-risk jurisdictions in rapid succession
+- Beneficiary countries on FATF grey or black lists
+- Inconsistency between stated business purpose and actual wire patterns
+- New accounts immediately initiating large cross-border wires (short account tenure)
+- Multiple wires to the same foreign beneficiary with slight amount variations
+- Use of correspondent banking to obscure the originator trail
+- Beneficiary entities with no verifiable online presence or business registration
+- Wires routed through jurisdictions with strong banking secrecy laws
+- PEP or PEP-adjacent recipients in the wire chain
+
+GEOGRAPHIC RISK FACTORS (HIGH-RISK JURISDICTIONS):
+- UAE: Free zones (JAFZA, DAFZA) used for opaque layering structures
+- Jordan: Proximity to conflict zones; informal value transfer systems prevalent
+- Turkey: Significant hawala activity; transit point for Middle Eastern funds
+- Cayman Islands: Offshore financial centre; beneficial ownership opacity
+- British Virgin Islands, Panama, Seychelles: Shell company proliferation
+
+PATTERN VARIANTS:
+1. Boomerang Wires: Funds sent abroad and returned to different domestic account
+2. Round-Tripping: Money leaves and re-enters US appearing as foreign investment
+3. Nested Correspondent Abuse: Using smaller correspondent banks to obscure originator
+4. Shell Company Chain: Multiple shell entities in different jurisdictions receive/forward funds
+
+VELOCITY AND CONCENTRATION INDICATORS:
+- More than 3 cross-border wire transfers to same country in 30 days without documented business purpose
+- Wire transfers beginning within 30 days of account opening
+- Total cross-border wire volume exceeds 200% of account's historical baseline
+- Single beneficiary receiving >60% of total outgoing wire volume
+
+DOCUMENTATION RED FLAGS:
+- Customer cannot produce invoices when requested
+- Invoice amounts inconsistent with market rates for stated goods/services
+- Vague descriptions: "consulting," "management fees," "services rendered"
+- Counterparty entity registered after the customer's account was opened
+
+REGULATORY TRIGGERS:
+SAR filing warranted when two or more layering indicators co-occur with geographic risk. Enhanced Due Diligence (EDD) required for all Tier 1 correspondent relationships with high-risk jurisdictions.
+
+CASE TYPOLOGY EXAMPLE:
+Account opened 6 months ago by "import/export consultant" shows 7 wire transfers in 72 hours to three high-risk countries (UAE, Jordan, Turkey), all structured below $10,000, totaling $68,150. Beneficiary entities include one (Al-Najah Trading LLC) where the account holder's spouse is listed as a director — creating a PEP-adjacent relationship. Pattern matches FATF Mutual Evaluation findings on UAE and Jordan.

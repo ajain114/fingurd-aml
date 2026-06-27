@@ -1,0 +1,36 @@
+TYPOLOGY: STRUCTURING (SMURFING)
+Source: FinCEN Advisory FIN-2020-A003 | FATF Guidance on AML/CFT Measures
+Category: Placement Stage Money Laundering
+
+DEFINITION:
+Structuring is the deliberate act of breaking up financial transactions into smaller amounts, specifically to avoid Currency Transaction Report (CTR) filing requirements that apply to cash transactions of $10,000 or more. This is a federal crime under 31 U.S.C. § 5324 regardless of whether the funds are from legal or illegal sources.
+
+KEY RED FLAGS:
+- Multiple transactions just below $10,000 threshold (typically $8,000–$9,999)
+- Same-day or consecutive-day transactions at different branches or ATMs
+- Transactions split across multiple accounts or family members
+- Customer requests information about CTR thresholds
+- Round numbers or highly consistent amounts across multiple transactions
+- No plausible business explanation for transaction fragmentation
+- Rapid deposits followed by equally rapid withdrawals
+
+PATTERN VARIANTS:
+1. Classic Structuring: Single individual making multiple sub-$10K deposits
+2. Smurfing: Multiple individuals ("smurfs") each depositing sub-$10K amounts
+3. Reverse Structuring: Breaking up large withdrawals to avoid detection
+4. Commingled Structuring: Mixing legitimate and illicit funds across multiple transactions
+
+STATISTICAL INDICATORS:
+- Standard deviation of transaction amounts is abnormally low (amounts are suspiciously consistent)
+- Bimodal distribution of amounts with cluster just below $10,000
+- Transaction frequency spikes with inverse relationship to individual transaction amounts
+- Velocity increase without corresponding business event
+
+REGULATORY GUIDANCE:
+Per FinCEN, financial institutions must file a SAR when they know, suspect, or have reason to suspect a transaction involves structuring. The willful element is NOT required for SAR filing — reasonable suspicion is sufficient. Filing deadline: 30 days from detection, 60 days if no suspect identified.
+
+PREDICATE CRIMES COMMONLY ASSOCIATED:
+Drug trafficking, tax evasion, fraud, human trafficking, bribery and corruption
+
+CASE TYPOLOGY EXAMPLE:
+A business account shows 7 outgoing wire transfers over 72 hours, all to foreign counterparties, with individual amounts ranging from $9,500 to $9,900 — all below the $10,000 CTR threshold. The total of $68,150 would trigger CTR filing if conducted as a single transaction. No invoice or business purpose documentation provided by customer.
