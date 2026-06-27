@@ -229,11 +229,11 @@ with st.sidebar:
             help="console.groq.com → API Keys → Create"
         )
         model = st.selectbox("Model", [
-            "llama3-groq-70b-8192-tool-use-preview",
-            "llama3-groq-8b-8192-tool-use-preview",
             "llama-3.3-70b-versatile",
+            "meta-llama/llama-4-scout-17b-16e-instruct",
+            "qwen/qwen3-32b",
             "llama-3.1-8b-instant",
-        ], help="llama3-groq-70b = best tool calling | 8b = faster | 3.3-70b = general purpose")
+        ], help="llama-3.3-70b = best quality | llama-4-scout = fast | qwen3 = alternative")
         st.caption("⚡ Groq runs Llama on custom LPU chips — fast & free")
         st.caption("🏦 In production: swap to Bedrock Claude (same tool schemas)")
     else:
