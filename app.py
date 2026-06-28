@@ -269,11 +269,25 @@ with st.sidebar:
     st.caption("**HITL**: Human-in-the-Loop approval")
     st.caption("**Mirrors**: Amazon Bedrock AgentCore")
 
+    # ── Secret unlock button (hidden at bottom of sidebar) ────────────────────
+    st.markdown("<div style='margin-top:40px'></div>", unsafe_allow_html=True)
+    col_secret, _ = st.columns([1, 8])
+    with col_secret:
+        if st.button("🔧", key="unlock_custom", help="", use_container_width=False):
+            st.session_state.show_custom = not st.session_state.get("show_custom", False)
+
 
 # ── Main content tabs ─────────────────────────────────────────────────────────
-tab_investigate, tab_custom, tab_rules, tab_arch, tab_bedrock = st.tabs([
-    "🔍 Investigate", "🧪 Custom Case", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"
-])
+if "show_custom" not in st.session_state:
+    st.session_state.show_custom = False
+
+if st.session_state.show_custom:
+    _tabs = st.tabs(["🔍 Investigate", "🧪 Custom Case", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"])
+    tab_investigate, tab_custom, tab_rules, tab_arch, tab_bedrock = _tabs
+else:
+    _tabs = st.tabs(["🔍 Investigate", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"])
+    tab_investigate, tab_rules, tab_arch, tab_bedrock = _tabs
+    tab_custom = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -520,9 +534,10 @@ with tab_investigate:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 2: CUSTOM CASE
+# TAB 2: CUSTOM CASE (hidden unless unlocked via 🔧 button in sidebar)
 # ══════════════════════════════════════════════════════════════════════════════
-with tab_custom:
+if tab_custom is not None:
+ with tab_custom:
     st.markdown("### 🧪 Custom Case — Enter Your Own Client Data")
     st.markdown(
         "Fill in the fields below to test the risk scoring engine on any scenario. "
