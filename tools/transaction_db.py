@@ -227,6 +227,7 @@ TRANSACTIONS = {
 
 def get_transaction_history(account_id: str, days: int = 90) -> dict:
     """Retrieve credit card transaction history."""
+    days = int(days)
     txns = TRANSACTIONS.get(account_id, [])
     cutoff = datetime.now() - timedelta(days=days)
     recent = [t for t in txns if datetime.strptime(t["date"], "%Y-%m-%d") >= cutoff]
@@ -338,6 +339,7 @@ def get_cli_history(account_id: str) -> dict:
 
 def get_mcc_risk_profile(account_id: str, days: int = 30) -> dict:
     """Analyze Merchant Category Code (MCC) distribution for risk assessment."""
+    days = int(days)
     txns = TRANSACTIONS.get(account_id, [])
     cutoff = datetime.now() - timedelta(days=days)
     recent = [t for t in txns if t["type"] == "PURCHASE" and datetime.strptime(t["date"], "%Y-%m-%d") >= cutoff]

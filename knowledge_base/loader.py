@@ -65,6 +65,7 @@ def _get_collection():
 
 
 def search_typologies(query: str, n_results: int = 3) -> dict:
+    n_results = int(n_results)
     """
     Semantic search over AML typology knowledge base.
     Returns most relevant typology chunks with source attribution.
