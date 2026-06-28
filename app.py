@@ -269,25 +269,38 @@ with st.sidebar:
     st.caption("**HITL**: Human-in-the-Loop approval")
     st.caption("**Mirrors**: Amazon Bedrock AgentCore")
 
-    # ── Secret unlock button (hidden at bottom of sidebar) ────────────────────
+    # ── Secret unlock buttons (hidden at bottom of sidebar) ───────────────────
     st.markdown("<div style='margin-top:40px'></div>", unsafe_allow_html=True)
-    col_secret, _ = st.columns([1, 8])
-    with col_secret:
+    col_s1, col_s2, _ = st.columns([1, 1, 7])
+    with col_s1:
         if st.button("🔧", key="unlock_custom", help="", use_container_width=False):
             st.session_state.show_custom = not st.session_state.get("show_custom", False)
+    with col_s2:
+        if st.button("☁️", key="unlock_bedrock", help="", use_container_width=False):
+            st.session_state.show_bedrock = not st.session_state.get("show_bedrock", False)
 
 
 # ── Main content tabs ─────────────────────────────────────────────────────────
 if "show_custom" not in st.session_state:
     st.session_state.show_custom = False
+if "show_bedrock" not in st.session_state:
+    st.session_state.show_bedrock = False
 
+_tab_labels = ["🔍 Investigate"]
 if st.session_state.show_custom:
-    _tabs = st.tabs(["🔍 Investigate", "🧪 Custom Case", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"])
-    tab_investigate, tab_custom, tab_rules, tab_arch, tab_bedrock = _tabs
-else:
-    _tabs = st.tabs(["🔍 Investigate", "📋 Risk Rules", "🏗️ Architecture", "☁️ Bedrock Production Code"])
-    tab_investigate, tab_rules, tab_arch, tab_bedrock = _tabs
-    tab_custom = None
+    _tab_labels.append("🧪 Custom Case")
+_tab_labels += ["📋 Risk Rules", "🏗️ Architecture"]
+if st.session_state.show_bedrock:
+    _tab_labels.append("☁️ Bedrock Production Code")
+
+_tabs = st.tabs(_tab_labels)
+_i = 0
+tab_investigate = _tabs[_i]; _i += 1
+tab_custom = _tabs[_i] if st.session_state.show_custom else None
+if st.session_state.show_custom: _i += 1
+tab_rules = _tabs[_i]; _i += 1
+tab_arch = _tabs[_i]; _i += 1
+tab_bedrock = _tabs[_i] if st.session_state.show_bedrock else None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1027,193 +1040,442 @@ with tab_arch:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3: BEDROCK PRODUCTION CODE
+# TAB: BEDROCK PRODUCTION CODE (hidden unless unlocked via ☁️ button in sidebar)
 # ══════════════════════════════════════════════════════════════════════════════
-with tab_bedrock:
-    st.markdown("## Production Code — Amazon Bedrock AgentCore")
+if tab_bedrock is not None:
+ with tab_bedrock:
+    st.markdown("## FinGuard on Amazon Bedrock — Step-by-Step Implementation")
     st.markdown("""
-    > The code below is exactly how this demo would be deployed in production at Synchrony using
-    > Amazon Bedrock AgentCore. The demo uses `anthropic` Python SDK directly (free);
-    > switching to Bedrock requires only changing the client — same Claude model, same tool schemas.
+    > Every component of this demo maps 1-to-1 to a managed Bedrock service.
+    > Switching from this prototype to production is **one client change** — not a rewrite.
     """)
 
-    with st.expander("1️⃣ Create the Supervisor Agent (Bedrock)", expanded=True):
+    # ── Architecture Flow Diagram ──────────────────────────────────────────────
+    st.markdown("### Architecture Flow")
+    st.graphviz_chart("""
+    digraph finguard_bedrock {
+        rankdir=LR
+        node [fontname="Helvetica" fontsize=10 margin="0.2,0.1"]
+        edge [fontsize=9]
+
+        alert  [label="Fraud Alert\\n(Rule Engine)" shape=oval style=filled fillcolor="#FFF3CD"]
+
+        supervisor [label="Supervisor Agent\\nClaude 3.5 Sonnet\\n(AgentCore)" shape=box style="filled,rounded" fillcolor="#CCE5FF"]
+
+        txn      [label="Transaction Risk\\nAgent" shape=box style="filled,rounded" fillcolor="#D4EDDA"]
+        entity   [label="Entity Intel\\nAgent"     shape=box style="filled,rounded" fillcolor="#D4EDDA"]
+        typology [label="AML Typology\\nAgent"     shape=box style="filled,rounded" fillcolor="#D4EDDA"]
+        writer   [label="Case Writer\\nAgent"      shape=box style="filled,rounded" fillcolor="#D4EDDA"]
+
+        lambda_txn    [label="Lambda\\nAction Group\\n(transaction_db)" shape=component style=filled fillcolor="#F8D7DA"]
+        lambda_entity [label="Lambda\\nAction Group\\n(watchlist / idv)" shape=component style=filled fillcolor="#F8D7DA"]
+        kb            [label="Knowledge Base\\nS3 + Titan Embeddings\\nOpenSearch Serverless" shape=cylinder style=filled fillcolor="#E2D9F3"]
+        lambda_sar    [label="Lambda\\nAction Group\\n(SAR formatter)"  shape=component style=filled fillcolor="#F8D7DA"]
+
+        guardrails [label="Bedrock\\nGuardrails\\n(PII Anonymize)" shape=box style="filled,rounded" fillcolor="#FFE5B4"]
+        hitl       [label="Human-in-Loop\\nBSA Analyst\\nApproval"   shape=diamond style=filled fillcolor="#FADADD"]
+        fincen     [label="FinCEN SAR\\nFiled" shape=oval style=filled fillcolor="#D4EDDA"]
+
+        alert -> supervisor
+
+        supervisor -> txn      [label="delegate"]
+        supervisor -> entity   [label="delegate"]
+        supervisor -> typology [label="delegate"]
+        supervisor -> writer   [label="delegate"]
+
+        txn      -> supervisor [label="findings" style=dashed]
+        entity   -> supervisor [label="findings" style=dashed]
+        typology -> supervisor [label="findings" style=dashed]
+        writer   -> supervisor [label="SAR draft" style=dashed]
+
+        txn      -> lambda_txn    [style=dotted color=gray]
+        entity   -> lambda_entity [style=dotted color=gray]
+        typology -> kb            [style=dotted color=gray]
+        writer   -> lambda_sar    [style=dotted color=gray]
+
+        supervisor -> guardrails
+        guardrails -> hitl
+        hitl -> fincen [label="Approved"]
+    }
+    """, use_container_width=True)
+
+    # ── Demo → Production mapping ──────────────────────────────────────────────
+    st.markdown("### Demo → Production Component Map")
+    st.markdown("""
+| Demo Component | Amazon Bedrock Service |
+|---|---|
+| `ChromaDB` in-memory | **Knowledge Base** (S3 + Titan Embeddings + OpenSearch Serverless) |
+| `BaseAgent._run_anthropic()` | **Bedrock Agent** (InvokeAgent API) |
+| Tool functions in `tools/` | **Lambda** registered as Action Groups |
+| `class Supervisor` | **Supervisor Agent** with Agent Collaborators |
+| `on_step` callback | **CloudWatch** trace events (`enableTrace=True`) |
+| Streamlit HITL buttons | **`requireConfirmation: ENABLED`** on Action Group |
+| Prompt-level rules | **Bedrock Guardrails** |
+| `anthropic.Anthropic(api_key=...)` | **`anthropic.AnthropicBedrock()`** — IAM auth, no key |
+    """)
+
+    st.divider()
+
+    # ── Step-by-step ──────────────────────────────────────────────────────────
+    st.markdown("### Step-by-Step Implementation")
+
+    with st.expander("✅ Prerequisites — IAM + Model Access", expanded=True):
+        st.code("""
+# 1. Install
+pip install boto3 awscli
+aws configure  # Access Key, Secret Key, us-east-1, json
+
+# 2. IAM policies to attach to your role:
+#    AmazonBedrockFullAccess
+#    AWSLambda_FullAccess
+#    AmazonS3FullAccess
+#    AmazonOpenSearchServiceFullAccess
+
+# 3. Enable Claude model access (Console: Bedrock → Model Access)
+import boto3
+bedrock = boto3.client("bedrock", region_name="us-east-1")
+bedrock.put_foundation_model_entitlement(
+    modelId="anthropic.claude-3-5-sonnet-20241022-v2:0"
+)
+""", language="bash")
+
+    with st.expander("1️⃣ Build the Knowledge Base — replaces ChromaDB"):
         st.code("""
 import boto3
 
+s3 = boto3.client("s3", region_name="us-east-1")
+BUCKET = "finguard-aml-knowledge-base"
+s3.create_bucket(Bucket=BUCKET)
+
+# Upload typology documents (same .txt files from knowledge_base/typologies/)
+import os
+for fname in os.listdir("knowledge_base/typologies/"):
+    if fname.endswith(".txt"):
+        s3.upload_file(f"knowledge_base/typologies/{fname}", BUCKET, f"typologies/{fname}")
+
+# Create OpenSearch Serverless collection (vector store)
+aoss = boto3.client("opensearchserverless", region_name="us-east-1")
+aoss.create_security_policy(name="finguard-enc",  type="encryption",
+    policy='{"Rules":[{"Resource":["collection/finguard-vectors"],"ResourceType":"collection"}],"AWSOwnedKey":true}')
+aoss.create_security_policy(name="finguard-net", type="network",
+    policy='[{"Rules":[{"Resource":["collection/finguard-vectors"],"ResourceType":"collection"}],"AllowFromPublic":true}]')
+resp = aoss.create_collection(name="finguard-vectors", type="VECTORSEARCH")
+collection_arn = resp["createCollectionDetail"]["arn"]
+# Wait ~5 min for collection to become ACTIVE
+
+# Create Knowledge Base
 bedrock_agent = boto3.client("bedrock-agent", region_name="us-east-1")
-
-# Create supervisor agent
-supervisor = bedrock_agent.create_agent(
-    agentName="fingurd-supervisor",
-    agentResourceRoleArn="arn:aws:iam::ACCOUNT:role/BedrockAgentRole",
-    foundationModel="anthropic.claude-3-5-sonnet-20241022-v2:0",
-    instruction=\"\"\"
-        You are the FinGuard investigation supervisor at Synchrony Financial.
-        Coordinate transaction risk analysis, entity intelligence, AML typology matching,
-        and SAR drafting by delegating to specialist agent collaborators.
-        Synthesize their findings and route the final case for human review.
-    \"\"\",
-    agentCollaboration="SUPERVISOR",  # ← enables multi-agent mode
-)
-
-supervisor_id = supervisor["agent"]["agentId"]
-""", language="python")
-
-    with st.expander("2️⃣ Register Transaction Risk Agent as Collaborator"):
-        st.code("""
-# Create Transaction Risk sub-agent (with Action Group)
-txn_agent = bedrock_agent.create_agent(
-    agentName="fingurd-txn-risk",
-    foundationModel="anthropic.claude-3-5-sonnet-20241022-v2:0",
-    instruction="You are a Transaction Risk Analyst. Detect bust-out fraud patterns...",
-)
-
-# Create Action Group (backed by Lambda)
-bedrock_agent.create_agent_action_group(
-    agentId=txn_agent["agent"]["agentId"],
-    agentVersion="DRAFT",
-    actionGroupName="TransactionAnalyticsActions",
-    actionGroupExecutor={"lambda": "arn:aws:lambda:us-east-1:ACCOUNT:function:fingurd-txn-tools"},
-    functionSchema={
-        "functions": [
-            {
-                "name": "get_transaction_history",
-                "description": "Retrieve credit card transaction history",
-                "parameters": {
-                    "account_id": {"type": "string", "required": True},
-                    "days": {"type": "integer", "required": False},
-                },
-            },
-            {
-                "name": "detect_bust_out_pattern",
-                "description": "Run bust-out fraud detection algorithm",
-                "parameters": {
-                    "account_id": {"type": "string", "required": True},
-                },
-            },
-        ]
-    },
-)
-
-# Associate as collaborator with supervisor
-bedrock_agent.associate_agent_collaborator(
-    agentId=supervisor_id,
-    agentVersion="DRAFT",
-    agentDescriptor={"aliasArn": f"arn:aws:bedrock:us-east-1:ACCOUNT:agent-alias/{txn_agent['agent']['agentId']}/TSTALIASID"},
-    collaboratorName="TransactionRiskAgent",
-    collaborationInstruction="Analyze transaction patterns for bust-out fraud, ATO, and suspicious activity.",
-)
-""", language="python")
-
-    with st.expander("3️⃣ Create Bedrock Knowledge Base (AML Typologies)"):
-        st.code("""
-# Knowledge Base = ChromaDB in this demo
-# In production: S3 + Titan Embeddings + OpenSearch Serverless
-
-bedrock_agent.create_knowledge_base(
-    name="fingurd-aml-typologies",
-    description="FATF typologies, FinCEN advisories, Synchrony fraud patterns",
-    roleArn="arn:aws:iam::ACCOUNT:role/BedrockKBRole",
+kb = bedrock_agent.create_knowledge_base(
+    name="finguard-aml-typologies",
+    roleArn="arn:aws:iam::ACCOUNT:role/finguard-kb-role",
     knowledgeBaseConfiguration={
         "type": "VECTOR",
         "vectorKnowledgeBaseConfiguration": {
+            # Titan Embeddings v2 = 1536 dims (vs 384 in demo all-MiniLM-L6-v2)
             "embeddingModelArn": "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
-        },
+        }
     },
     storageConfiguration={
         "type": "OPENSEARCH_SERVERLESS",
         "opensearchServerlessConfiguration": {
-            "collectionArn": "arn:aws:aoss:us-east-1:ACCOUNT:collection/fingurd-vectors",
+            "collectionArn": collection_arn,
             "vectorIndexName": "aml-typologies-index",
-            "fieldMapping": {
-                "vectorField": "embedding",
-                "textField": "content",
-                "metadataField": "metadata",
-            },
-        },
-    },
+            "fieldMapping": {"vectorField": "embedding", "textField": "text", "metadataField": "metadata"}
+        }
+    }
 )
+KB_ID = kb["knowledgeBase"]["knowledgeBaseId"]
 
-# Sync typology documents from S3
-bedrock_agent.start_ingestion_job(
-    knowledgeBaseId="KB-ID",
-    dataSourceId="DS-ID",
+# Create data source + trigger sync
+ds = bedrock_agent.create_data_source(
+    knowledgeBaseId=KB_ID,
+    name="typology-documents",
+    dataSourceConfiguration={"type": "S3", "s3Configuration": {
+        "bucketArn": f"arn:aws:s3:::{BUCKET}", "inclusionPrefixes": ["typologies/"]
+    }},
+    vectorIngestionConfiguration={"chunkingConfiguration": {
+        "chunkingStrategy": "FIXED_SIZE",
+        "fixedSizeChunkingConfiguration": {"maxTokens": 512, "overlapPercentage": 20}
+    }}
 )
+bedrock_agent.start_ingestion_job(knowledgeBaseId=KB_ID, dataSourceId=ds["dataSource"]["dataSourceId"])
+print("Ingestion started — takes ~2 minutes")
 """, language="python")
+        st.info("This replaces `knowledge_base/loader.py` entirely. `search_typologies()` becomes `bedrock_runtime.retrieve(knowledgeBaseId=KB_ID, ...)`")
 
-    with st.expander("4️⃣ Invoke the Supervisor Agent (runtime)"):
+    with st.expander("2️⃣ Package Tools as Lambda Functions — replaces `tools/`"):
         st.code("""
-import boto3
+# lambda_functions/transaction_tools/handler.py
 import json
 
-runtime = boto3.client("bedrock-agent-runtime", region_name="us-east-1")
+def lambda_handler(event, context):
+    function  = event["function"]
+    params    = {p["name"]: p["value"] for p in event.get("parameters", [])}
 
-# Invoke with trace enabled (mirrors our on_step callback)
-response = runtime.invoke_agent(
-    agentId=supervisor_id,
-    agentAliasId="TSTALIASID",
-    sessionId="investigation-CC-4821-2026-06-27",
-    inputText=\"\"\"
-        Investigate account CC-4821 (James Holloway, Synchrony Amazon Store Card).
-        Alert: Bust-out fraud suspected. Utilization 98.7%. Phone disconnected.
-        7 high-risk transactions in 10 days totaling $7,892.
-    \"\"\",
-    enableTrace=True,  # ← streams agent reasoning steps (our on_step equivalent)
+    if function == "get_transaction_history":
+        result = get_transaction_history(params["account_id"], int(params.get("days", 90)))
+    elif function == "detect_bust_out_pattern":
+        result = detect_bust_out_pattern(params["account_id"])
+    elif function == "get_mcc_risk_profile":
+        result = get_mcc_risk_profile(params["account_id"])
+    else:
+        result = {"error": f"Unknown function: {function}"}
+
+    # Bedrock expects this exact response envelope
+    return {
+        "messageVersion": "1.0",
+        "response": {
+            "actionGroup": event["actionGroup"],
+            "function": function,
+            "functionResponse": {"responseBody": {"TEXT": {"body": json.dumps(result)}}}
+        }
+    }
+
+# Deploy
+import subprocess
+subprocess.run(["zip", "-r", "transaction_tools.zip", "lambda_functions/transaction_tools/"])
+import boto3
+boto3.client("lambda").create_function(
+    FunctionName="finguard-transaction-tools",
+    Runtime="python3.11", Handler="handler.lambda_handler",
+    ZipFile=open("transaction_tools.zip","rb").read(),
+    Role="arn:aws:iam::ACCOUNT:role/finguard-lambda-role",
+    Timeout=30, MemorySize=256,
 )
-
-# Stream the response + trace events
-for event in response["completion"]:
-    if "chunk" in event:
-        print(event["chunk"]["bytes"].decode())
-    elif "trace" in event:
-        trace = event["trace"]["trace"]
-        if "orchestrationTrace" in trace:
-            step = trace["orchestrationTrace"]
-            if "rationale" in step:
-                print(f"Reasoning: {step['rationale']['text']}")
-            if "invocationInput" in step:
-                print(f"Tool call: {step['invocationInput']}")
 """, language="python")
 
-    with st.expander("5️⃣ Guardrails (PII protection + compliance)"):
+    with st.expander("3️⃣ Create the 4 Specialist Agents"):
         st.code("""
-bedrock.create_guardrail(
-    name="fingurd-compliance-guardrail",
-    description="Protect PII, prevent hallucination in SAR narratives",
-    sensitiveInformationPolicyConfig={
-        "piiEntitiesConfig": [
-            {"type": "SSN", "action": "ANONYMIZE"},
-            {"type": "CREDIT_DEBIT_CARD_NUMBER", "action": "ANONYMIZE"},
-            {"type": "EMAIL", "action": "ANONYMIZE"},
-            {"type": "PHONE", "action": "ANONYMIZE"},
-        ]
-    },
-    topicPolicyConfig={
-        "topicsConfig": [
-            {
-                "name": "investment-advice",
-                "definition": "Do not provide investment or financial advice",
-                "type": "DENY",
-            }
-        ]
-    },
-    contentPolicyConfig={
-        "filtersConfig": [{"type": "HATE", "inputStrength": "HIGH", "outputStrength": "HIGH"}]
-    },
+MODEL = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+ROLE  = "arn:aws:iam::ACCOUNT:role/finguard-agent-role"
+
+# --- Transaction Risk Agent ---
+txn_agent = bedrock_agent.create_agent(
+    agentName="finguard-transaction-risk",
+    agentResourceRoleArn=ROLE, foundationModel=MODEL,
+    instruction="You are a Transaction Risk Analyst at Synchrony Financial..."
+    # (paste full SYSTEM_PROMPT from agents/transaction_risk.py)
+)
+bedrock_agent.create_agent_action_group(
+    agentId=txn_agent["agent"]["agentId"], agentVersion="DRAFT",
+    actionGroupName="transaction-tools",
+    actionGroupExecutor={"lambda": "arn:aws:lambda:us-east-1:ACCOUNT:function:finguard-transaction-tools"},
+    functionSchema={"functions": [
+        {"name": "get_transaction_history", "description": "Retrieve credit card transaction history",
+         "parameters": {"account_id": {"type": "string","required": True}, "days": {"type": "integer","required": False}}},
+        {"name": "detect_bust_out_pattern",  "description": "Detect bust-out fraud pattern",
+         "parameters": {"account_id": {"type": "string","required": True}}},
+        {"name": "get_mcc_risk_profile",    "description": "Analyze MCC risk distribution",
+         "parameters": {"account_id": {"type": "string","required": True}}},
+    ]}
+)
+
+# --- AML Typology Agent — associates Knowledge Base instead of Lambda ---
+typology_agent = bedrock_agent.create_agent(
+    agentName="finguard-aml-typology",
+    agentResourceRoleArn=ROLE, foundationModel=MODEL,
+    instruction="You are an AML Typology Specialist. Search the knowledge base..."
+)
+bedrock_agent.associate_agent_knowledge_base(
+    agentId=typology_agent["agent"]["agentId"], agentVersion="DRAFT",
+    knowledgeBaseId=KB_ID,
+    description="AML typology documents — FATF, FinCEN, Synchrony PLCC patterns",
+    knowledgeBaseState="ENABLED"
+)
+
+# Repeat pattern for Entity Intel Agent and Case Writer Agent
+# Prepare each agent after creation
+for agent_id in [txn_agent["agent"]["agentId"], typology_agent["agent"]["agentId"], ...]:
+    bedrock_agent.prepare_agent(agentId=agent_id)
+""", language="python")
+
+    with st.expander("4️⃣ Create the Supervisor Agent with Agent Collaborators"):
+        st.code("""
+supervisor = bedrock_agent.create_agent(
+    agentName="finguard-supervisor",
+    agentResourceRoleArn=ROLE, foundationModel=MODEL,
+    instruction=\"\"\"You are the orchestrating supervisor for FinGuard, Synchrony's
+AI-powered fraud investigation platform. When given an account alert:
+1. Delegate transaction analysis to the Transaction Risk Agent
+2. Delegate identity/watchlist checks to the Entity Intelligence Agent
+3. Delegate typology matching to the AML Typology Agent
+4. Delegate SAR narrative writing to the Case Writer Agent
+Synthesize findings and produce a complete investigation package.\"\"\",
+    agentCollaboration="SUPERVISOR",    # ← KEY: enables multi-agent orchestration
+)
+SUPERVISOR_ID = supervisor["agent"]["agentId"]
+
+# Register each specialist as a collaborator
+collaborators = [
+    ("finguard-transaction-risk", TXN_AGENT_ID,      TXN_ALIAS_ID,      "Analyze transaction patterns for bust-out, ATO, money mule"),
+    ("finguard-entity-intel",     ENTITY_AGENT_ID,   ENTITY_ALIAS_ID,   "Screen identity against watchlists, verify SSN/address"),
+    ("finguard-aml-typology",     TYPOLOGY_AGENT_ID, TYPOLOGY_ALIAS_ID, "Match suspicious activity to FATF/FinCEN typologies via RAG"),
+    ("finguard-case-writer",      WRITER_AGENT_ID,   WRITER_ALIAS_ID,   "Write FinCEN SAR Field 34 narrative"),
+]
+for name, agent_id, alias_id, instruction in collaborators:
+    bedrock_agent.associate_agent_collaborator(
+        agentId=SUPERVISOR_ID, agentVersion="DRAFT",
+        agentDescriptor={"aliasArn": f"arn:aws:bedrock:us-east-1:ACCOUNT:agent-alias/{agent_id}/{alias_id}"},
+        collaboratorName=name,
+        collaborationInstruction=instruction,
+        relayConversationHistory="TO_COLLABORATOR",
+    )
+
+bedrock_agent.prepare_agent(agentId=SUPERVISOR_ID)
+alias = bedrock_agent.create_agent_alias(agentId=SUPERVISOR_ID, agentAliasName="production-v1")
+SUPERVISOR_ALIAS_ID = alias["agentAlias"]["agentAliasId"]
+""", language="python")
+
+    with st.expander("5️⃣ Add Bedrock Guardrails — PII + Compliance"):
+        st.code("""
+bedrock = boto3.client("bedrock", region_name="us-east-1")
+
+guardrail = bedrock.create_guardrail(
+    name="finguard-compliance-guardrail",
+    sensitiveInformationPolicyConfig={"piiEntitiesConfig": [
+        {"type": "SSN",                      "action": "ANONYMIZE"},
+        {"type": "CREDIT_DEBIT_CARD_NUMBER", "action": "ANONYMIZE"},
+        {"type": "EMAIL",                    "action": "ANONYMIZE"},
+        {"type": "PHONE",                    "action": "ANONYMIZE"},
+    ]},
+    topicPolicyConfig={"topicsConfig": [
+        {"name": "investment-advice",
+         "definition": "Providing investment or financial planning advice",
+         "type": "DENY"}
+    ]},
+    contentPolicyConfig={"filtersConfig": [
+        {"type": "HATE",     "inputStrength": "HIGH",   "outputStrength": "HIGH"},
+        {"type": "VIOLENCE", "inputStrength": "MEDIUM", "outputStrength": "HIGH"},
+    ]},
+    blockedInputMessaging="This request cannot be processed for compliance reasons.",
+    blockedOutputsMessaging="This response was blocked by compliance policy.",
+)
+GUARDRAIL_ID      = guardrail["guardrailId"]
+GUARDRAIL_VERSION = guardrail["version"]
+""", language="python")
+
+    with st.expander("6️⃣ HITL with Bedrock — replaces Streamlit buttons"):
+        st.code("""
+# Set requireConfirmation=ENABLED on the SAR filing Action Group
+# Bedrock pauses the agent and returns a returnControl event — your UI catches it
+
+bedrock_agent.create_agent_action_group(
+    agentId=SUPERVISOR_ID, agentVersion="DRAFT",
+    actionGroupName="sar-filing",
+    actionGroupExecutor={"lambda": SAR_LAMBDA_ARN},
+    functionSchema={"functions": [{
+        "name": "file_sar",
+        "description": "File Suspicious Activity Report with FinCEN",
+        "requireConfirmation": "ENABLED",     # ← Bedrock HITL
+        "parameters": {
+            "account_id":    {"type": "string", "required": True},
+            "sar_narrative": {"type": "string", "required": True},
+            "amount":        {"type": "number", "required": True},
+        }
+    }]}
+)
+
+# Resume after human approves (same sessionId as original invoke)
+bedrock_runtime.invoke_agent(
+    agentId=SUPERVISOR_ID, agentAliasId=SUPERVISOR_ALIAS_ID,
+    sessionId=session_id,     # must match original session
+    sessionState={"returnControlInvocationResults": [{
+        "functionResult": {
+            "actionGroup": "sar-filing",
+            "function": "file_sar",
+            "responseBody": {"TEXT": {"body": '{"approved": true, "analyst": "ashish.jain@synchrony.com"}'}}
+        }
+    }]}
 )
 """, language="python")
 
-    st.markdown("""
-    ---
-    ### Cost Estimate for Production (Bedrock)
-    | Component | Bedrock Resource | Estimated Monthly Cost |
-    |---|---|---|
-    | Supervisor + 3 Collaborators | Claude 3.5 Sonnet (~2K tokens/investigation) | ~$0.05/investigation |
-    | AML Knowledge Base | Titan Embeddings v2 + OpenSearch Serverless | ~$150/month (fixed) |
-    | Storage | S3 (typology docs) | ~$1/month |
-    | Lambda (Action Groups) | ~100ms per tool call | ~$5/month for 1M alerts |
-    | **Total for 50K investigations/month** | | **~$2,650/month** |
+    with st.expander("7️⃣ Invoke the Supervisor at Runtime"):
+        st.code("""
+import uuid, boto3
 
-    > Compared to: manual analyst cost = ~$45-90/investigation → **Agentic AI ROI: 95%+ cost reduction on Tier-1 triage**
-    """)
+bedrock_runtime = boto3.client("bedrock-agent-runtime", region_name="us-east-1")
+
+def investigate(account_id: str, alert_description: str):
+    session_id = str(uuid.uuid4())
+    response = bedrock_runtime.invoke_agent(
+        agentId=SUPERVISOR_ID,
+        agentAliasId=SUPERVISOR_ALIAS_ID,
+        sessionId=session_id,
+        inputText=f"Investigate account {account_id}. Alert: {alert_description}",
+        enableTrace=True,           # mirrors our on_step callback
+        guardrailConfiguration={
+            "guardrailId": GUARDRAIL_ID,
+            "guardrailVersion": GUARDRAIL_VERSION,
+        }
+    )
+
+    full_response = ""
+    for event in response["completion"]:
+        if "chunk" in event:
+            full_response += event["chunk"]["bytes"].decode("utf-8")
+        if "trace" in event:
+            trace = event["trace"]["trace"]
+            if "orchestrationTrace" in trace:
+                step = trace["orchestrationTrace"]
+                if "rationale" in step:
+                    print(f"[Reasoning] {step['rationale']['text']}")
+                if "invocationInput" in step:
+                    print(f"[Tool Call]  {step['invocationInput']}")
+
+    return full_response
+
+# Usage — identical to supervisor.investigate() in this demo
+result = investigate("CC-4821", "Bust-out suspected. Utilization 98.7%. Phone disconnected.")
+print(result)
+""", language="python")
+
+    with st.expander("8️⃣ One-Line Switch: Demo SDK → Bedrock SDK"):
+        st.code("""
+# ── DEMO (current) ────────────────────────────────────────────────────────────
+import anthropic
+client = anthropic.Anthropic(api_key="sk-ant-...")
+
+# ── PRODUCTION on Bedrock (one import change) ─────────────────────────────────
+import anthropic
+client = anthropic.AnthropicBedrock(
+    aws_region="us-east-1"
+    # Uses IAM role automatically — no API key, no secret rotation needed
+)
+
+# Everything else is IDENTICAL:
+# - Same tool schemas (JSON Schema format)
+# - Same system prompts
+# - Same agentic loop logic in BaseAgent
+# - Same stop_reason == "end_turn" check
+# - Same tool_use block parsing
+
+response = client.messages.create(
+    model="anthropic.claude-3-5-sonnet-20241022-v2:0",  # Bedrock model ID prefix
+    max_tokens=2048,
+    system=system_prompt,
+    tools=tools,
+    messages=messages,
+)
+""", language="python")
+
+    with st.expander("9️⃣ Cost Estimate for 50K Investigations/Month"):
+        st.markdown("""
+| Component | Bedrock Resource | Est. Monthly Cost |
+|---|---|---|
+| Supervisor + 4 Specialist Agents | Claude 3.5 Sonnet (~2K tokens each) | ~$0.05 / investigation |
+| AML Knowledge Base | Titan Embeddings v2 + OpenSearch Serverless | ~$150 / month (fixed) |
+| Lambda (Action Groups) | ~100ms per tool call, ~10 calls/investigation | ~$5 / month at 500K calls |
+| S3 (typology documents) | < 1 MB | ~$0.01 / month |
+| CloudWatch (agent traces) | Trace events per investigation | ~$10 / month |
+| **50K investigations/month total** | | **~$2,660 / month** |
+
+---
+
+**ROI vs Manual Analyst:**
+- Manual Tier-1 triage: **$45–$90 per investigation** × 50K = **$2.25M–$4.5M/month**
+- FinGuard on Bedrock: **$2,660/month**
+- **Cost reduction: 99.8% on Tier-1 triage**
+- Analysts freed up for Tier-2 complex cases requiring human judgement
+
+> *"The AI doesn't replace the BSA analyst — it eliminates the 80% of alerts that are obvious false positives or clear fraud, so the analyst spends their time on the 20% that actually need human expertise."*
+        """)
